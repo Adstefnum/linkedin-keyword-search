@@ -12,7 +12,7 @@ filters = []
 # response = requests.get("https://www.linkedin.com/search/results/people/?keywords=%22CTO%22%20AND%20%22Industrial%20Company%22%20AND%20%22Europe%22&origin=SWITCH_SEARCH_VERTICAL&sid=XhJ"
 
 
-cookies_filename = "cookies.txt"
+cookies_filename = "./outputs/cookies.txt"
 
 class LinkedinScraper:
 
@@ -31,8 +31,7 @@ class LinkedinScraper:
             urllib.request.HTTPCookieProcessor(self.cookies)
         )
         self.opener.addheaders = [
-            ('User-agent', ('Mozilla/4.0 (compatible; MSIE 6.0; '
-                           'Windows NT 5.2; .NET CLR 1.1.4322)'))
+            ('User-agent', ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'))
         ]
        
 
@@ -66,7 +65,7 @@ class LinkedinScraper:
                 response = self.opener.open(url)
             return ''.join([str(l) for l in response.readlines()])
         except Exception as e:
-            return self.loadPage(url, data)
+            return self.load_page(url, data)
 
     def retrieve_soup(self,url,data=None):
         html = self.load_page(url, data)
@@ -81,6 +80,9 @@ scraper.login_to_linkedin()
 # print(soup.find("title"))
 
 soup = scraper.retrieve_soup("https://www.linkedin.com/search/results/people/?keywords=%22CTO%22%20AND%20%22Industrial%20Company%22%20AND%20%22Europe%22&origin=SWITCH_SEARCH_VERTICAL&sid=XhJ")
+with open('./outputs/soup.html','w') as file:
+    file.write(soup.prettify())
+file.close()
 # print(soup)
 
 
