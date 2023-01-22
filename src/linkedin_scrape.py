@@ -1,18 +1,23 @@
-import http.cookiejar as cookielib
 from bs4 import BeautifulSoup
 import urllib
 import requests
-import os
+import time
+import random
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
 
-filters = []
 
-# response = requests.get("https://www.linkedin.com/search/results/people/?keywords=%22CTO%22%20AND%20%22Industrial%20Company%22%20AND%20%22Europe%22&origin=SWITCH_SEARCH_VERTICAL&sid=XhJ"
+HOMEPAGE_URL = "https://linkedin.com/"
+LOGIN_URL = "https://www.linkedin.com/uas/login-submit"
+COOKIE_FILENAME = "./outputs/cookies.txt"
+user_agents = [
+  "Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0",
+  "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
+  "Mozilla/5.0 (X11; Linux x86_64; rv:95.0) Gecko/20100101 Firefox/95.0"
+  ]
+random_user_agent = random.choice(user_agents)
 
-
-cookies_filename = "./outputs/cookies.txt"
 
 class LinkedinScraper:
 
@@ -20,20 +25,12 @@ class LinkedinScraper:
         self.username = config['USER_EMAIL']
         self.password = config['USER_PASSWORD']
 
-           # Simulate browser with cookies enabled
-        self.cookies = cookielib.MozillaCookieJar(cookies_filename)
-        if os.access(cookies_filename, os.F_OK):
-            self.cookies.load()
-        self.opener = urllib.request.build_opener(
-            urllib.request.HTTPRedirectHandler(),
-            urllib.request.HTTPHandler(debuglevel=0),
-            urllib.request.HTTPSHandler(debuglevel=0),
-            urllib.request.HTTPCookieProcessor(self.cookies)
-        )
-        self.opener.addheaders = [
-            ('User-agent', ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'))
-        ]
-       
+     
+        self.session = requests.Session()
+        self.session.headers.update(
+            {'User-agent': random_user_agent,
+            'Cookie':self.get_cookies('.linkedin.com')}
+            )
 
     def login_to_linkedin(self):
         csrf = self.get_csrf_token()
@@ -44,46 +41,60 @@ class LinkedinScraper:
             'loginCsrfParam': csrf,
         }).encode('utf8')
 
-        self.load_page("https://www.linkedin.com/uas/login-submit", login_data)
-        self.cookies.save()
-
+        self.load_page_using_requests(LOGIN_URL, login_data)
         return
 
 
+
     def get_csrf_token(self):
-        page  = requests.get("https://linkedin.com/")
+        page  = requests.get(HOMEPAGE_URL)
         soup = BeautifulSoup(page.text, features="html.parser")
         return soup.find('input', attrs={'name': 'loginCsrfParam'})['value']
 
-    #sleep after each tries, receive max_tries as arg
-    def load_page(self, url, data=None):
+    def get_cookies(self,domain):
+        page  = requests.get(HOMEPAGE_URL)
+        cookie_dict = page.cookies.get_dict(domain=domain)
+        found = ['%s=%s' % (name, value) for (name, value) in cookie_dict.items()]
+        return ';'.join(found)
 
+   
+
+    def load_page_using_requests(self, url, data=None):
         try:
             if data is not None:
-                response = self.opener.open(url, data)
+                response = self.session.post(url, data)
+                
+                self.save_html_to_file('post',response.content)
             else:
-                response = self.opener.open(url)
-            return ''.join([str(l) for l in response.readlines()])
+                response = self.session.get(url)
+                self.save_html_to_file('get',response.content)
+            return response.content
         except Exception as e:
-            return self.load_page(url, data)
+            print(e)
+            return 
+
+    def save_html_to_file(self,filename, content):
+        with open(f'./outputs/{filename}.html','w') as file:
+                file.write(str(content))
+        file.close()
 
     def retrieve_soup(self,url,data=None):
-        html = self.load_page(url, data)
-        soup = BeautifulSoup(html, "html.parser")
+        html = self.load_page_using_requests(url, data)
+        soup = BeautifulSoup(html, features = "html.parser")
         return soup
 
 scraper = LinkedinScraper()
 
 scraper.login_to_linkedin()
 
-# soup = scraper.retrieve_soup("https://www.linkedin.com/feed/")
-# print(soup.find("title"))
+soup = scraper.retrieve_soup("https://www.linkedin.com/feed/")
+print(soup.find("title"))
 
-soup = scraper.retrieve_soup("https://www.linkedin.com/search/results/people/?keywords=%22CTO%22%20AND%20%22Industrial%20Company%22%20AND%20%22Europe%22&origin=SWITCH_SEARCH_VERTICAL&sid=XhJ")
-with open('./outputs/soup.html','w') as file:
-    file.write(soup.prettify())
-file.close()
-# print(soup)
+# soup = scraper.retrieve_soup("https://www.linkedin.com/search/results/people/?keywords=%22CTO%22%20AND%20%22Industrial%20Company%22%20AND%20%22Europe%22&origin=SWITCH_SEARCH_VERTICAL&sid=XhJ")
+# with open('./outputs/soup.html','w') as file:
+#     file.write(soup.prettify())
+# file.close()
+# # print(soup)
 
 
 
