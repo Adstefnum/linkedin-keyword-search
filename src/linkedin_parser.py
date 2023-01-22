@@ -10,7 +10,7 @@ class LinkedinParser:
 
     def __init__(self, soup):
         self.document_object_model = etree.HTML(str(soup))
-        self.results = []
+        self.results = [['ID','Name','Company']]
 
     def get_value_of_text_element_using_xpath(self,path):
         return self.document_object_model.xpath(f'{path}')[0].text
