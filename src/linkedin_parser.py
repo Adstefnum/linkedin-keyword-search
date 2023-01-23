@@ -38,9 +38,24 @@ with open('./outputs/soup.html','r') as file:
     soup = file.read()
     beaut = BeautifulSoup(soup, features ='html.parser')
     results = beaut.find(class_=RESULTS_CLASS)
+
     names_and_ids = results.find_all(class_="entity-result__title-text t-16")
-    print(names_and_ids)
+    result = []
+    final = []
+    for n in names_and_ids:
+        result.extend(n.find_all('a'))
+
+    for x in result:
+        href = x.get('href').split('/')[4].split('?')[0]
+        final.append(href)
+    print(final)
+
     companies = results.find_all(class_="entity-result__primary-subtitle t-14 t-black t-normal")
+    x = []
+    y = []
+    for i in companies:
+        x.append(i.text)
+    print(x)
 
     # parser = LinkedinParser(soup)
     # print(parser.get_value_of_text_element_using_xpath(NAME_XPATH))
