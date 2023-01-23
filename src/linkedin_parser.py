@@ -2,9 +2,13 @@ from bs4 import BeautifulSoup
 from lxml import etree
 
 NAME_XPATH ='//*[@id="vOBumQanRr62leWLbm4DBA=="]/div/ul/li[1]/div/div/div[2]/div[1]/div[1]/div/span[1]/span/a/span/span[1]/text()' 
+NAME_CLASS = 'app-aware-link '
 ID_XPATH = '//*[@id="vOBumQanRr62leWLbm4DBA=="]/div/ul/li[1]/div/div/div[2]/div[1]/div[1]/div/span[1]/span/a'#get the href and then split by / and then by ?
 COMPANY_XPATH ='//*[@id="vOBumQanRr62leWLbm4DBA=="]/div/ul/li[3]/div/div/div[2]/div[1]/div[2]/div[1]/text()'
-RESULTS_LIST_PATH = ''
+COMPANY_CLASS = 'entity-result__primary-subtitle t-14 t-black t-normal'
+RESULTS_LIST_PATH = '//*[@id="M9H/vPChRKuQGMDaCVjs+Q=="]/div/ul'
+RESULTS_CLASS = 'reusable-search__entity-result-list list-style-none'
+INDIVIDUAL_RESULT_CLASS = 'reusable-search__result-container.entity-result.entity-result__item'
 
 class LinkedinParser:
 

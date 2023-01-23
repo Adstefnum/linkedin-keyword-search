@@ -3,6 +3,8 @@ import urllib
 import requests
 import time
 import random
+import os
+import json
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -10,7 +12,7 @@ config = dotenv_values(".env")
 
 HOMEPAGE_URL = "https://linkedin.com/"
 LOGIN_URL = "https://www.linkedin.com/uas/login-submit"
-COOKIE_FILENAME = "./outputs/cookies.txt"
+COOKIE_FILENAME = "./outputs/cookies.json"
 user_agents = [
   "Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0",
   "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
@@ -27,10 +29,12 @@ class LinkedinScraper:
 
      
         self.session = requests.Session()
-        self.session.headers.update(
-            {'User-agent': random_user_agent,
-            'Cookie':self.get_cookies('.linkedin.com')}
-            )
+        self.session.headers.update({
+            'User-agent': random_user_agent,
+            'Cookie':self.get_cookies('.linkedin.com'),
+            'Connection': 'keep-alive',
+            "Keep-Alive":"timeout=5, max=100"
+            })
 
     def login_to_linkedin(self):
         csrf = self.get_csrf_token()
@@ -42,6 +46,8 @@ class LinkedinScraper:
         }).encode('utf8')
 
         self.load_page_using_requests(LOGIN_URL, login_data)
+        with open(COOKIE_FILENAME, 'w') as file:
+            json.dump(requests.utils.dict_from_cookiejar(self.session.cookies), file)
         return
 
 
@@ -63,6 +69,8 @@ class LinkedinScraper:
         try:
             if data is not None:
                 response = self.session.post(url, data)
+
+                print(response.status_code)
                 
                 self.save_html_to_file('post',response.content)
             else:
@@ -73,19 +81,27 @@ class LinkedinScraper:
             print(e)
             return 
 
+    def update_cookies(self):
+        if os.path.isfile(COOKIE_FILENAME):
+            with open(COOKIE_FILENAME) as file:
+                cookies = json.load(file)
+                self.session.cookies = requests.utils.cookiejar_from_dict(cookies)
+
     def save_html_to_file(self,filename, content):
         with open(f'./outputs/{filename}.html','w') as file:
                 file.write(str(content))
         file.close()
 
-    def retrieve_soup(self,url,data=None):
-        html = self.load_page_using_requests(url, data)
-        soup = BeautifulSoup(html, features = "html.parser")
+    def retrieve_soup(self,url):
+        html = self.session.get(url)
+        print(html)
+        soup = BeautifulSoup(html.content, features = "html.parser")
         return soup
 
 scraper = LinkedinScraper()
 
 scraper.login_to_linkedin()
+# scraper.update_cookies() 
 
 soup = scraper.retrieve_soup("https://www.linkedin.com/feed/")
 print(soup.find("title"))
